@@ -1,2 +1,3 @@
 # SSW215-DThomas
 My work for SSW 215, Fall 2026
+Devin Thomas, my goal for this semester is to create a project that assists in problem solving and makes some facet of daily life more simple
