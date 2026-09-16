@@ -4,4 +4,4 @@ Devin Thomas
 My goal for this semester is to create a project that assists in problem solving and makes some facet of daily life more simple
 
 ## Labs
-- Lab 2 — connected this repository to my laptop
+- Lab 2 — edited this line on my laptop
