@@ -18,13 +18,14 @@
   - Personal Developer Portfolio — A portfolio website showcasing my software engineering projects and experience.
   - Note-Taking Tool — A tool designed to make taking and organizing notes easier while staying focused.
 - Social link: GitHub (https://github.com/devinthms/SSW215-DThomas.git) MUST open in a new tab (target="_blank").
+- The page background MUST be dark navy (#1b2a41) with white text.
 
 ## 4. Acceptance Checklist
-- [ ] Valid semantic HTML5: the page uses <header>, <main>, and <footer>.
-- [ ] The avatar image has width, height, and alt attributes.
-- [ ] No horizontal scrollbar when the browser is narrowed to 375px.
-- [ ] The GitHub link opens in a new tab and has rel="noopener".
-- [ ] No placeholder links: href="#" appears nowhere.
+- [x] Valid semantic HTML5: the page uses <header>, <main>, and <footer>.
+- [x] The avatar image has width, height, and alt attributes.
+- [x] No horizontal scrollbar when the browser is narrowed to 375px.
+- [x] The GitHub link opens in a new tab and has rel="noopener".
+- [x] No placeholder links: href="#" appears nowhere.
 
 ## 5. Audit Protocol
 - Inspect the generated code line by line with `git diff --staged` before committing.
