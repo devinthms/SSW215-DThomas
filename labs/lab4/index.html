@@ -6,49 +6,60 @@
     <title>Devin Thomas | Portfolio</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body>
+  <body class="site-body">
     <header class="site-header">
-      <div class="container hero">
-        <div class="hero-copy">
-          <h1>Devin Thomas</h1>
+      <nav class="top-nav container" aria-label="Main navigation">
+        <a class="nav-link" href="#projects">Projects</a>
+        <a class="nav-link" href="https://github.com/devinthms/SSW215-DThomas.git" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+
+      <section class="hero-section container" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <h1 id="hero-title" class="hero-title">Devin Thomas</h1>
           <p class="subtitle">Software Engineering Student at Stevens Institute of Technology</p>
           <p class="bio">
             I am a software engineering student interested in building practical technology and improving my programming skills. I enjoy working on projects that combine software, hardware, and problem-solving.
           </p>
-          <a class="button" href="#projects">See my projects</a>
+          <a class="button-link" href="#projects">See my projects</a>
         </div>
+
         <img
           class="profile-image"
           src="./assets/avatar.jpg"
+          alt="Devin Thomas portrait"
           width="220"
           height="220"
-          alt="Devin Thomas portrait"
         />
-      </div>
+      </section>
     </header>
 
-    <main class="container main-content">
-      <section id="projects" class="projects">
-        <h2>Projects</h2>
-        <ul>
-          <li>
-            <strong>Automated Plant Monitoring System</strong>
-            An ESP32-based system that monitors plant conditions and automates watering.
-          </li>
-          <li>
-            <strong>Personal Developer Portfolio</strong>
-            A portfolio website showcasing my software engineering projects and experience.
-          </li>
-          <li>
-            <strong>Note-Taking Tool</strong>
-            A tool designed to make taking and organizing notes easier while staying focused.
-          </li>
-        </ul>
+    <main class="main-content">
+      <section id="projects" class="projects-section container" aria-labelledby="projects-heading">
+        <h2 id="projects-heading" class="section-title">Projects</h2>
+
+        <div class="projects-grid">
+          <article class="card">
+            <h3 class="card-title">Automated Plant Monitoring System</h3>
+            <p>An ESP32-based system that monitors plant conditions and automates watering.</p>
+          </article>
+
+          <article class="card">
+            <h3 class="card-title">Personal Developer Portfolio</h3>
+            <p>A portfolio website showcasing my software engineering projects and experience.</p>
+          </article>
+
+          <article class="card">
+            <h3 class="card-title">Note-Taking Tool</h3>
+            <p>A tool designed to make taking and organizing notes easier while staying focused.</p>
+          </article>
+        </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <a href="https://github.com/devinthms/SSW215-DThomas.git" target="_blank" rel="noopener">GitHub</a>
+      <div class="container footer-content">
+        <a class="footer-link" href="https://github.com/devinthms/SSW215-DThomas.git" target="_blank" rel="noopener">GitHub</a>
+      </div>
     </footer>
   </body>
 </html>
