@@ -132,7 +132,7 @@ html {
 .projects-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 2rem;  /* hand-edited by DT */
 }
 
 .card {
@@ -141,6 +141,11 @@ html {
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 1.25rem;
+}
+
+/* hand-edited by DT */
+.featured {
+  background: #fff7e6;
 }
 
 .card-title {
