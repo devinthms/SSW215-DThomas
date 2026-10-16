@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Devin Thomas | Portfolio</title>
+    <script src="./app.js" defer></script>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body class="site-body">
@@ -39,6 +40,14 @@
     <main class="main-content">
       <section id="projects" class="projects-section container" aria-labelledby="projects-heading">
         <h2 id="projects-heading" class="section-title">Projects</h2>
+
+        <div class="project-filter">
+          <label class="filter-label" for="filter-input">Filter projects</label>
+          <input class="filter-input" id="filter-input" type="search" />
+          <p class="project-count" id="project-count" aria-live="polite">
+            Showing 3 of 3 projects
+          </p>
+        </div>
 
         <div class="projects-grid">
           <article class="card featured">
