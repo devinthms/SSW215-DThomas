@@ -7,8 +7,11 @@ function filterProjects() {
   let visibleCount = 0;
 
   projectCards.forEach((card) => {
-    const matches = card.textContent.toLowerCase().includes(query);
-    card.classList.toggle("hidden", !matches);
+    const cardText = card.textContent.toLowerCase();
+    const matches = cardText.includes(query);
+    // hand-edited by DT
+
+    card.classList.toggle("is-hidden", !matches);  // hand-edited by DT
 
     if (matches) {
       visibleCount += 1;
