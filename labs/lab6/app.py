@@ -21,6 +21,13 @@ projects_db = [
         "description": "A tool designed to make taking and organizing notes easier while staying focused.",
         "likes": 0,
     },
+    #hand-edited by DT
+    {
+        "id": 4,
+        "title": "Student Task Manager",
+        "description": "A tool for organizing assignments, tracking deadlines, and managing schoolwork.",
+        "likes": 0,
+    },
 ]
 
 
