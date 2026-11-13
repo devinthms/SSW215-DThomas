@@ -139,7 +139,7 @@ server does not crash.
 - [x] instance/portfolio.db contains two tables.
 - [x] Deleting instance/portfolio.db and restarting rebuilds both tables with the seed
 data.
-- [ ] After reloading the page, the author’s name is visible on it. <!-- written by DT -->
+- [ ] After reloading the page, Devin Thomas is visible on it. <!-- written by DT -->
 - [ ] Opening http://127.0.0.1:5000/api/author in the browser, or checking it in the Network tab, shows JSON with an "author" field that matches the name on the page. <!-- written by DT -->
 
 ## 5. Audit Protocol- The "See my projects" button MUST have four visually distinct states: :hover, :focus-

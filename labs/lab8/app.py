@@ -17,6 +17,7 @@ class Project(db.Model):
     title = db.Column(db.String(120), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=False, default="")
     likes = db.Column(db.Integer, nullable=False, default=0)
+    author_id = db.Column(db.Integer, db.ForeignKey("author.id"), nullable=False)
 
     def to_dict(self):
         return {
@@ -24,7 +25,14 @@ class Project(db.Model):
             "title": self.title,
             "description": self.description,
             "likes": self.likes,
+            "author": self.author.name,
         }
+
+
+class Author(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    projects = db.relationship("Project", backref="author")
 
 
 def init_seed_data():
@@ -35,6 +43,8 @@ def init_seed_data():
     with seed_file.open(encoding="utf-8") as projects_file:
         seed_projects = json.load(projects_file)
 
+    author = Author(name="Devin Thomas")
+    db.session.add(author)
     for project_data in seed_projects:
         db.session.add(
             Project(
@@ -42,6 +52,7 @@ def init_seed_data():
                 title=project_data["title"],
                 description=project_data["description"],
                 likes=project_data["likes"],
+                author=author,
             )
         )
 
@@ -61,13 +72,22 @@ with app.app_context():
 @app.route("/")
 def index():
     projects = Project.query.order_by(Project.id).all()
-    return render_template("index.html", projects=projects)
+    author = Author.query.order_by(Author.id).first()
+    return render_template("index.html", projects=projects, author=author)
 
 
 @app.route("/api/projects")
 def get_projects():
     projects = Project.query.order_by(Project.id).all()
     return jsonify([project.to_dict() for project in projects])
+
+
+@app.route("/api/author")
+def get_author():
+    author = Author.query.order_by(Author.id).first()
+    if author is None:
+        return jsonify(error="Author not found"), 404
+    return jsonify(author=author.name)
 
 
 @app.route("/api/projects/<int:project_id>/upvote", methods=["POST"])
@@ -96,7 +116,16 @@ def create_project():
     if not isinstance(title, str) or not title.strip():
         return jsonify(error="A project title is required"), 400
 
-    project = Project(title=title.strip(), description="", likes=0)
+    author = Author.query.order_by(Author.id).first()
+    if author is None:
+        return jsonify(error="No project author is available"), 400
+
+    project = Project(
+        title=title.strip(),
+        description="",
+        likes=0,
+        author=author,
+    )
     db.session.add(project)
     try:
         db.session.commit()
