@@ -22,5 +22,17 @@
     "title": "Student Task Manager",
     "description": "A tool for organizing assignments, tracking deadlines, and managing schoolwork.",
     "likes": 0
+  },
+  {
+    "id": 5,
+    "title": "Shaun's House Scanner",
+    "description": "",
+    "likes": 0
+  },
+  {
+    "id": 6,
+    "title": "Devin's Drone",
+    "description": "",
+    "likes": 0
   }
 ]
