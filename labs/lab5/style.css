@@ -184,8 +184,7 @@ html {
   flex-wrap: wrap;
   gap: 2rem;  /* hand-edited by DT */
 }
-/* hand-edited by DT */
-.is-hidden {
+.hidden {
   display: none;
 }
 

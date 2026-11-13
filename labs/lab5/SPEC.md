@@ -13,7 +13,7 @@
 border-box; }`.
 - Spacing and font sizes MUST use rem. px MAY be used only for borders.
 - Styling MUST use class selectors. ID selectors MUST NOT be used for styling.
-- All JavaScript MUST live in ./app.js. index.html MUST NOT contain inline onclick
+- All JavaScript MUST live in ./.js. index.html MUST NOT contain inline onclick
 attributes or any <script> block with code inside it.
 - app.js MUST be loaded from <head> with <script src="./app.js" defer></script>.
 - Showing and hiding MUST be done by adding and removing a CSS class. app.js MUST NOT set
@@ -47,15 +47,19 @@ adding the class "hidden", and the count MUST update immediately — no button, 
 reload.
 - Emptying the box MUST bring every card back.
 - style.css MUST define .hidden { display: none; }.
+- Each time the filter runs, app.js MUST print the titles of the projects that are still
+visible to the console with console.log.
 
 ## 4. Acceptance Checklist
-- [ ] app.js is loaded from <head> with defer, and index.html has no inline onclick and
+- [x] app.js is loaded from <head> with defer, and index.html has no inline onclick and
 no code inside a <script> tag.
-- [ ] Typing in the filter box hides and shows cards live, without pressing anything.
-- [ ] The "Showing X of Y projects" line updates as I type.
-- [ ] Emptying the box brings every card back.
-- [ ] app.js contains no .style assignments — hiding is done with the "hidden" class.
-- [ ] The DevTools Console shows no red errors when the page loads.
+- [x] Typing in the filter box hides and shows cards live, without pressing anything.
+- [x] The "Showing X of Y projects" line updates as I type.
+- [x] Emptying the box brings every card back.
+- [x] app.js contains no .style assignments — hiding is done with the "hidden" class.
+- [x] The DevTools Console shows no red errors when the page loads.
+- [x] Typing in the filter prints the matching project titles in the Console, and the
+list gets shorter as I type.
 
 ## 5. Audit Protocol- The "See my projects" button MUST have four visually distinct states: :hover, :focus-
 visible, :active, and :disabled.
