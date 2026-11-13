@@ -122,7 +122,9 @@ list coming from a database query.
 from each project's to_dict() method.
 - Adding a project and upvoting a project MUST both work exactly as they did in Lab 7,
 writing to the database instead of to a file
-- A project created with the Add project form MUST be attached to the same seeded author.
+- A project created with the Add project form MUST be attached to the same seeded author. 
+- The page MUST show the author’s name, Devin Thomas, in text visible without clicking or hovering. <!-- written by DT -->
+- The server MUST answer a GET request to /api/author with JSON containing an "author" field whose value is the same name the page shows. <!-- written by DT -->
 
 ## 4. Acceptance Checklist
 - [x] Starting the server creates instance/portfolio.db, and the page shows the projects
@@ -137,6 +139,8 @@ server does not crash.
 - [x] instance/portfolio.db contains two tables.
 - [x] Deleting instance/portfolio.db and restarting rebuilds both tables with the seed
 data.
+- [ ] After reloading the page, the author’s name is visible on it. <!-- written by DT -->
+- [ ] Opening http://127.0.0.1:5000/api/author in the browser, or checking it in the Network tab, shows JSON with an "author" field that matches the name on the page. <!-- written by DT -->
 
 ## 5. Audit Protocol- The "See my projects" button MUST have four visually distinct states: :hover, :focus-
 visible, :active, and :disabled.
