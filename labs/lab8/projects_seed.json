@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "title": "Automated Plant Monitoring System",
+    "description": "An ESP32-based system that monitors plant conditions and automates watering.",
+    "likes": 11
+  },
+  {
+    "id": 2,
+    "title": "Personal Developer Portfolio",
+    "description": "A portfolio website showcasing my software engineering projects and experience.",
+    "likes": 0
+  },
+  {
+    "id": 3,
+    "title": "Note-Taking Tool",
+    "description": "A tool designed to make taking and organizing notes easier while staying focused.",
+    "likes": 0
+  },
+  {
+    "id": 4,
+    "title": "Student Task Manager",
+    "description": "A tool for organizing assignments, tracking deadlines, and managing schoolwork.",
+    "likes": 0
+  },
+  {
+    "id": 5,
+    "title": "Shaun's House Scanner",
+    "description": "",
+    "likes": 0
+  },
+  {
+    "id": 6,
+    "title": "Devin's Drone",
+    "description": "",
+    "likes": 0
+  }
+]
