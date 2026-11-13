@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Capture class notes and organize them into useful study materials.">
+    <title>ClassNotes</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="./app.js" defer></script>
+  </head>
+  <body class="site-body">
+    <header class="site-header">
+      <div class="hero">
+        <p class="app-name">ClassNotes</p>
+        <h1>Capture fast. Organize later.</h1>
+        <p class="hero-description">A calm space to catch your ideas in class and turn them into study-ready notes when you have time.</p>
+        <a class="button button-primary" href="#workspace">Start a new session</a>
+      </div>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="#workspace">Workspace</a>
+        <a href="https://github.com/devinthms/SSW215-DThomas.git" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="workspace" id="workspace" aria-labelledby="workspace-heading">
+        <h2 id="workspace-heading">Your Workspace</h2>
+
+        <section class="editor" data-step="1" aria-labelledby="editor-heading">
+          <h3 id="editor-heading">Capture notes</h3>
+
+          <div class="progress-track">
+            <ol class="progress-steps" aria-label="Session progress">
+              <li class="step active">Capture</li>
+              <li class="step">Save</li>
+              <li class="step">Organize</li>
+              <li class="step">Review</li>
+            </ol>
+            <div class="progress-bar" role="progressbar" aria-label="Session progress" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
+              <span class="progress-bar-fill"></span>
+            </div>
+          </div>
+
+          <div class="editor-status">
+            <span class="status-label">Status</span>
+            <span class="status-tag tag-draft">Draft</span>
+          </div>
+
+          <form class="notes-form">
+            <div class="form-field">
+              <label for="session-title">Session title</label>
+              <input id="session-title" name="session-title" type="text" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="notes-input">Raw notes</label>
+              <textarea id="notes-input" name="notes" maxlength="2000" rows="10"></textarea>
+            </div>
+            <div class="note-metrics" aria-live="polite">
+              <span id="word-count">0 words</span>
+              <span id="char-limit">0 / 2000</span>
+            </div>
+            <div class="editor-actions">
+              <button class="button button-secondary" id="back-button" type="button" disabled>Back</button>
+              <button class="button button-primary" id="save-button" type="button" disabled>Save session</button>
+              <button class="button button-organize" id="organize-button" type="button" disabled>Organize with AI</button>
+              <button class="button button-danger" id="delete-button" type="button">Delete</button>
+              <button class="button button-secondary" id="new-session-button" type="button">New session</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="hidden results" aria-labelledby="results-heading">
+          <h3 id="results-heading">Organized results</h3>
+          <div class="results-grid">
+            <article class="result-card">
+              <h4>Structured notes</h4>
+              <p class="result-content" id="structured-notes">None found</p>
+            </article>
+            <article class="result-card">
+              <h4>Key points</h4>
+              <p class="result-content" id="key-points">None found</p>
+            </article>
+            <article class="result-card">
+              <h4>Questions</h4>
+              <p class="result-content" id="questions">None found</p>
+            </article>
+            <article class="result-card">
+              <h4>Follow-up items</h4>
+              <p class="result-content" id="follow-up-items">None found</p>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section class="sessions" aria-labelledby="sessions-heading">
+        <div class="sessions-header">
+          <h2 id="sessions-heading">Sessions</h2>
+          <p id="session-count" aria-live="polite">0 saved sessions</p>
+        </div>
+        <ul class="sessions-list" aria-label="Saved sessions">
+          <li class="empty-state">No sessions yet. Capture your first notes.</li>
+        </ul>
+      </section>
+
+      <section class="coming-soon" aria-labelledby="coming-soon-heading">
+        <p class="coming-soon-label">Coming soon</p>
+        <h2 id="coming-soon-heading">A new way to review</h2>
+        <p>Turn organized notes into quick flashcards and make your next study session count.</p>
+        <span class="coming-soon-feature">Flashcards from your notes</span>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>ClassNotes — a focused notebook for your studies.</p>
+    </footer>
+  </body>
+</html>
