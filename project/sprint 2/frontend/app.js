@@ -21,7 +21,6 @@ const sessionsList = document.querySelector(".sessions-list");
 const notesForm = document.querySelector(".notes-form");
 const startSessionLink = document.querySelector(".hero .button-primary");
 
-const storageKey = "classnotes-sessions";
 const sessionLimit = 2000;
 const resultFields = {
   structured: structuredNotes,
@@ -30,62 +29,113 @@ const resultFields = {
   followUp: followUpItems,
 };
 
-let sessions = loadSessions();
+const messageArea = document.createElement("p");
+messageArea.id = "message-area";
+messageArea.classList.add("message-area", "hidden");
+messageArea.setAttribute("role", "status");
+notesForm.parentNode.insertBefore(messageArea, notesForm);
+
+let sessions = [];
 let currentSessionId = null;
 let currentStep = 1;
-let organizationTimer = null;
+let requestInFlight = false;
 
-function loadSessions() {
-  try {
-    const storedSessions = localStorage.getItem(storageKey);
-    if (!storedSessions) {
-      return [];
-    }
-
-    const parsedSessions = JSON.parse(storedSessions);
-    if (!Array.isArray(parsedSessions)) {
-      throw new TypeError("Saved ClassNotes data must be an array.");
-    }
-
-    return parsedSessions.filter(
-      (session) =>
-        session &&
-        typeof session.id === "string" &&
-        typeof session.title === "string" &&
-        typeof session.raw === "string" &&
-        ["saved", "organized"].includes(session.status) &&
-        typeof session.updatedAt === "string" &&
-        (session.organized === null ||
-          (session.organized &&
-            ["structured", "keyPoints", "questions", "followUp"].every(
-              (key) =>
-                Array.isArray(session.organized[key]) &&
-                session.organized[key].every((line) => typeof line === "string"),
-            ))),
-    ).map((session) => ({
-      id: session.id,
-      title: session.title,
-      raw: session.raw,
-      status: session.status,
-      organized: session.organized ?? null,
-      updatedAt: session.updatedAt,
-    }));
-  } catch (error) {
-    console.error("Unable to load saved ClassNotes sessions.", error);
-    return [];
-  }
+function showMessage(message, isError = false) {
+  messageArea.textContent = message;
+  messageArea.classList.toggle("error", isError);
+  messageArea.classList.remove("hidden");
 }
 
-function persistSessions() {
+function clearMessage() {
+  messageArea.textContent = "";
+  messageArea.classList.remove("error");
+  messageArea.classList.add("hidden");
+}
+
+async function api(path, options = {}) {
+  let response;
   try {
-    localStorage.setItem(storageKey, JSON.stringify(sessions));
+    response = await fetch(path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers ?? {}),
+      },
+    });
   } catch (error) {
-    console.error("Unable to save ClassNotes sessions to local storage.", error);
+    showMessage("Cannot reach the server", true);
+    throw error;
+  }
+
+  console.log(`API ${path}: ${response.status}`);
+
+  let data;
+  if (response.status !== 204) {
+    try {
+      data = await response.json();
+    } catch (error) {
+      showMessage("The server returned an invalid response.", true);
+      throw error;
+    }
+  } else {
+    data = null;
+  }
+
+  return { status: response.status, data };
+}
+
+function sessionFromApi(session) {
+  const organized = session.organized;
+  return {
+    id: session.id,
+    title: session.title,
+    raw: session.raw_notes,
+    status: session.status,
+    organized: organized
+      ? {
+          structured: organized.structured,
+          keyPoints: organized.key,
+          questions: organized.questions,
+          followUp: organized.followups,
+        }
+      : null,
+    updatedAt: session.updated_at,
+  };
+}
+
+async function loadSessions() {
+  try {
+    const { status, data } = await api("/api/sessions");
+    if (status === 200 && Array.isArray(data)) {
+      sessions = data.map(sessionFromApi);
+      renderSessions();
+      return;
+    }
+    showMessage(data?.error ?? "Unable to load sessions.", true);
+  } catch {
+    return;
   }
 }
 
 function getCurrentSession() {
-  return sessions.find((session) => session.id === currentSessionId) ?? null;
+  return sessions.find((session) => String(session.id) === String(currentSessionId)) ?? null;
+}
+
+function updateButtonStates() {
+  const session = getCurrentSession();
+  backButton.disabled = requestInFlight || currentStep === 1;
+  saveButton.disabled =
+    requestInFlight || !notesInput.value.trim() || notesInput.value.length > sessionLimit;
+  organizeButton.disabled = requestInFlight || !session || !isUnchanged(session);
+  deleteButton.disabled = requestInFlight || !session;
+  newSessionButton.disabled = requestInFlight;
+  titleInput.disabled = requestInFlight;
+  notesInput.disabled = requestInFlight;
+}
+
+function setRequestInFlight(isInFlight) {
+  requestInFlight = isInFlight;
+  updateButtonStates();
 }
 
 function updateCounts() {
@@ -95,7 +145,7 @@ function updateCounts() {
   wordCount.textContent = `${words} ${words === 1 ? "word" : "words"}`;
   charLimit.textContent = `${notes.length} / ${sessionLimit}`;
   charLimit.classList.toggle("over", notes.length > sessionLimit);
-  saveButton.disabled = !notes.trim() || notes.length > sessionLimit;
+  updateButtonStates();
 }
 
 function updateStatus(status) {
@@ -116,14 +166,7 @@ function setStep(step) {
     stepElement.classList.toggle("active", stepNumber === currentStep);
   });
 
-  backButton.disabled = currentStep === 1;
-}
-
-function clearOrganizationTimer() {
-  if (organizationTimer !== null) {
-    window.clearTimeout(organizationTimer);
-    organizationTimer = null;
-  }
+  updateButtonStates();
 }
 
 function clearResults() {
@@ -147,7 +190,7 @@ function updateSessionCard(card, session, title, date, tag) {
   tag.textContent = session.status === "organized" ? "Organized" : "Saved";
   tag.classList.remove("tag-draft", "tag-saved", "tag-organized");
   tag.classList.add(`tag-${session.status}`);
-  card.classList.toggle("active", session.id === currentSessionId);
+  card.classList.toggle("active", String(session.id) === String(currentSessionId));
 }
 
 function createSessionCard(session) {
@@ -195,8 +238,7 @@ function renderCurrentSession() {
   notesInput.value = session?.raw ?? "";
   updateCounts();
   saveButton.textContent = session ? "Update session" : "Save session";
-  deleteButton.disabled = !session;
-  organizeButton.disabled = !session || !isUnchanged(session);
+  updateButtonStates();
   updateStatus(session?.status ?? "draft");
 
   if (organized && session?.status === "organized") {
@@ -214,13 +256,11 @@ function isUnchanged(session) {
 }
 
 function resetEditor() {
-  clearOrganizationTimer();
   currentSessionId = null;
   titleInput.value = "";
   notesInput.value = "";
   saveButton.textContent = "Save session";
-  deleteButton.disabled = true;
-  organizeButton.disabled = true;
+  updateButtonStates();
   updateStatus("draft");
   clearResults();
   setStep(1);
@@ -230,17 +270,15 @@ function resetEditor() {
 }
 
 function handleEditorChange() {
-  clearOrganizationTimer();
   updateCounts();
 
   const session = getCurrentSession();
   if (!session) {
-    organizeButton.disabled = true;
     return;
   }
 
   const unchanged = isUnchanged(session);
-  organizeButton.disabled = !unchanged;
+  organizeButton.disabled = requestInFlight || !unchanged;
   if (!unchanged) {
     setStep(2);
     updateStatus("draft");
@@ -254,127 +292,146 @@ function handleEditorChange() {
   renderSessions();
 }
 
-function createSessionId() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-
-function saveSession() {
+async function saveSession() {
   const raw = notesInput.value;
-  if (!raw.trim() || raw.length > sessionLimit) {
+  if (!raw.trim() || raw.length > sessionLimit || requestInFlight) {
     updateCounts();
     return;
   }
 
   const title = titleInput.value.trim() || "Untitled session";
   titleInput.value = title;
-  const timestamp = new Date().toISOString();
-  let session = getCurrentSession();
+  const existingSession = getCurrentSession();
+  const isEditing = existingSession !== null;
+  const path = isEditing ? `/api/sessions/${existingSession.id}` : "/api/sessions";
+  const method = isEditing ? "PUT" : "POST";
 
-  if (session) {
-    session.title = title;
-    session.raw = raw;
-    session.status = "saved";
-    session.organized = null;
-    session.updatedAt = timestamp;
-  } else {
-    session = {
-      id: createSessionId(),
-      title,
-      raw,
-      status: "saved",
-      organized: null,
-      updatedAt: timestamp,
-    };
-    sessions.push(session);
-    currentSessionId = session.id;
-  }
+  clearMessage();
+  setRequestInFlight(true);
+  try {
+    const { status, data } = await api(path, {
+      method,
+      body: JSON.stringify({ title, raw_notes: raw }),
+    });
 
-  persistSessions();
-  clearResults();
-  updateStatus("saved");
-  saveButton.textContent = "Update session";
-  deleteButton.disabled = false;
-  organizeButton.disabled = false;
-  setStep(2);
-  renderSessions();
-  console.log(`Session "${session.title}" status: ${session.status}`);
-}
-
-function organizeNotes(raw) {
-  const organized = {
-    structured: [],
-    keyPoints: [],
-    questions: [],
-    followUp: [],
-  };
-
-  raw.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean).forEach((line) => {
-    if (/\?$/u.test(line)) {
-      organized.questions.push(line);
-    } else if (/\b(?:review|need\s+to|follow\s+up|due)\b/iu.test(line)) {
-      organized.followUp.push(line);
-    } else if (/\b(?:important|exam)\b/iu.test(line)) {
-      organized.keyPoints.push(line);
-    } else {
-      organized.structured.push(line);
-    }
-  });
-
-  return organized;
-}
-
-function organizeSession() {
-  const session = getCurrentSession();
-  if (!session || !isUnchanged(session)) {
-    organizeButton.disabled = true;
-    return;
-  }
-
-  clearOrganizationTimer();
-  organizeButton.disabled = true;
-  setStep(3);
-  organizationTimer = window.setTimeout(() => {
-    organizationTimer = null;
-    const currentSession = getCurrentSession();
-    if (!currentSession || !isUnchanged(currentSession)) {
-      setStep(currentSession ? 2 : 1);
-      organizeButton.disabled = !currentSession || !isUnchanged(currentSession);
+    if (status === 400) {
+      showMessage(data?.error ?? "Unable to save session.", true);
       return;
     }
 
-    currentSession.organized = organizeNotes(currentSession.raw);
-    currentSession.status = "organized";
-    currentSession.updatedAt = new Date().toISOString();
-    persistSessions();
-    fillResults(currentSession.organized);
-    updateStatus("organized");
-    organizeButton.disabled = false;
-    setStep(4);
+    let savedSession;
+    if (status === 201 && !isEditing) {
+      savedSession = sessionFromApi(data);
+      sessions.push(savedSession);
+      currentSessionId = savedSession.id;
+    } else if (status === 200 && isEditing) {
+      savedSession = sessionFromApi(data);
+      sessions = sessions.map((session) =>
+        String(session.id) === String(savedSession.id) ? savedSession : session,
+      );
+      currentSessionId = savedSession.id;
+    } else {
+      showMessage(data?.error ?? "Unable to save session.", true);
+      return;
+    }
+
+    titleInput.value = savedSession.title;
+    notesInput.value = savedSession.raw;
+    saveButton.textContent = "Update session";
+    updateStatus(savedSession.status);
+    if (savedSession.status === "organized" && savedSession.organized) {
+      fillResults(savedSession.organized);
+      setStep(4);
+    } else {
+      clearResults();
+      setStep(2);
+    }
     renderSessions();
-    console.log(`Session "${currentSession.title}" status: ${currentSession.status}`);
-  }, 700);
+    console.log(`Session "${savedSession.title}" status: ${savedSession.status}`);
+  } catch {
+    return;
+  } finally {
+    setRequestInFlight(false);
+  }
 }
 
-function deleteSession() {
+async function organizeSession() {
   const session = getCurrentSession();
-  if (!session || !window.confirm(`Delete "${session.title}"? This cannot be undone.`)) {
+  if (!session || !isUnchanged(session) || requestInFlight) {
+    updateButtonStates();
     return;
   }
 
-  clearOrganizationTimer();
-  sessions = sessions.filter((item) => item.id !== session.id);
-  persistSessions();
-  console.log(`Session "${session.title}" status: deleted`);
-  resetEditor();
+  clearMessage();
+  setRequestInFlight(true);
+  setStep(3);
+  organizeButton.textContent = "Organizing...";
+
+  try {
+    const { status, data } = await api(`/api/sessions/${session.id}/organize`, {
+      method: "POST",
+    });
+
+    if (status === 200) {
+      const organizedSession = sessionFromApi(data);
+      sessions = sessions.map((item) =>
+        String(item.id) === String(organizedSession.id) ? organizedSession : item,
+      );
+      fillResults(organizedSession.organized);
+      updateStatus(organizedSession.status);
+      setStep(4);
+      renderSessions();
+      console.log(`Session "${organizedSession.title}" status: ${organizedSession.status}`);
+    } else {
+      showMessage(data?.error ?? "Unable to organize this session.", true);
+    }
+  } catch {
+    return;
+  } finally {
+    organizeButton.textContent = "Organize Notes";
+    setRequestInFlight(false);
+  }
+}
+
+async function deleteSession() {
+  const session = getCurrentSession();
+  if (!session || requestInFlight || !window.confirm(`Delete "${session.title}"? This cannot be undone.`)) {
+    return;
+  }
+
+  clearMessage();
+  setRequestInFlight(true);
+  try {
+    const { status, data } = await api(`/api/sessions/${session.id}`, {
+      method: "DELETE",
+    });
+
+    if (status === 204) {
+      sessions = sessions.filter((item) => String(item.id) !== String(session.id));
+      console.log(`Session "${session.title}" status: deleted`);
+      resetEditor();
+    } else if (status === 404) {
+      showMessage(data?.error ?? "Session not found.", true);
+      await loadSessions();
+      if (!sessions.some((item) => String(item.id) === String(session.id))) {
+        resetEditor();
+      }
+    } else {
+      showMessage(data?.error ?? "Unable to delete this session.", true);
+    }
+  } catch {
+    return;
+  } finally {
+    setRequestInFlight(false);
+  }
 }
 
 function openSession(sessionId) {
-  const session = sessions.find((item) => item.id === sessionId);
+  const session = sessions.find((item) => String(item.id) === String(sessionId));
   if (!session) {
     return;
   }
 
-  clearOrganizationTimer();
   currentSessionId = session.id;
   renderCurrentSession();
 }
@@ -385,10 +442,9 @@ notesForm.addEventListener("submit", (event) => event.preventDefault());
 saveButton.addEventListener("click", saveSession);
 organizeButton.addEventListener("click", organizeSession);
 backButton.addEventListener("click", () => {
-  clearOrganizationTimer();
   setStep(currentStep - 1);
   const session = getCurrentSession();
-  organizeButton.disabled = !session || !isUnchanged(session);
+  organizeButton.disabled = requestInFlight || !session || !isUnchanged(session);
 });
 deleteButton.addEventListener("click", deleteSession);
 newSessionButton.addEventListener("click", resetEditor);
@@ -420,3 +476,5 @@ sessionsList.addEventListener("keydown", (event) => {
 
 updateCounts();
 resetEditor();
+setRequestInFlight(true);
+loadSessions().finally(() => setRequestInFlight(false));
