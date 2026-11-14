@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -10,7 +11,8 @@ from werkzeug.exceptions import HTTPException
 
 
 BACKEND_DIR = Path(__file__).resolve().parent
-DATA_FILE = BACKEND_DIR / "data.json"
+DATABASE_FILE = BACKEND_DIR / "notes.db"
+SCHEMA_FILE = BACKEND_DIR / "schema.sql"
 FRONTEND_DIR = BACKEND_DIR.parent / "frontend"
 
 Session = dict[str, Any]
@@ -22,43 +24,30 @@ app = Flask(
 )
 
 
-def load_sessions() -> list[Session]:
-    """Load saved sessions, creating the data file the first time."""
-    if not DATA_FILE.exists():
-        save_sessions([])
-        return []
+def get_db_connection() -> sqlite3.Connection:
+    connection = sqlite3.connect(DATABASE_FILE)
+    connection.row_factory = sqlite3.Row
+    return connection
 
+
+def init_db() -> None:
+    connection = get_db_connection()
     try:
-        with DATA_FILE.open("r", encoding="utf-8") as data_file:
-            sessions = json.load(data_file)
-    except (json.JSONDecodeError, OSError) as error:
-        app.logger.warning("Unable to read session data from %s: %s", DATA_FILE, error)
-        return []
-
-    if not isinstance(sessions, list):
-        app.logger.warning("Session data in %s must be a JSON list.", DATA_FILE)
-        return []
-
-    return [session for session in sessions if isinstance(session, dict)]
+        with SCHEMA_FILE.open("r", encoding="utf-8") as schema_file:
+            connection.executescript(schema_file.read())
+        connection.commit()
+    finally:
+        connection.close()
 
 
-def save_sessions(sessions: list[Session]) -> None:
-    """Persist the complete session collection as JSON."""
-    with DATA_FILE.open("w", encoding="utf-8") as data_file:
-        json.dump(sessions, data_file, indent=2, ensure_ascii=False)
+def session_from_row(row: sqlite3.Row) -> Session:
+    session = {key: row[key] for key in row.keys() if key != "organized_json"}
+    organized_json = row["organized_json"]
+    session["organized"] = json.loads(organized_json) if organized_json is not None else None
+    return session
 
 
-def find_session(session_id: int, sessions: list[Session] | None = None) -> Session | None:
-    """Find a session by integer ID in the provided or persisted collection."""
-    collection = load_sessions() if sessions is None else sessions
-    return next(
-        (
-            session
-            for session in collection
-            if type(session.get("id")) is int and session.get("id") == session_id
-        ),
-        None,
-    )
+init_db()
 
 
 def organize_notes(raw_notes: str) -> dict[str, list[str]]:
@@ -130,13 +119,14 @@ def frontend_script() -> Response:
 
 @app.get("/api/sessions")
 def list_sessions() -> Response:
-    sessions = load_sessions()
-    newest_first = sorted(
-        sessions,
-        key=lambda session: str(session.get("created_at", "")),
-        reverse=True,
-    )
-    return jsonify(newest_first)
+    connection = get_db_connection()
+    try:
+        rows = connection.execute(
+            "SELECT * FROM note_sessions ORDER BY created_at DESC, id DESC"
+        ).fetchall()
+        return jsonify([session_from_row(row) for row in rows])
+    finally:
+        connection.close()
 
 
 @app.post("/api/sessions")
@@ -145,33 +135,40 @@ def create_session() -> tuple[Response, int] | Response:
     if error is not None:
         return error
 
-    sessions = load_sessions()
-    existing_ids = [
-        session.get("id")
-        for session in sessions
-        if type(session.get("id")) is int
-    ]
     timestamp = datetime.now(timezone.utc).isoformat()
-    session = {
-        "id": max(existing_ids, default=0) + 1,
-        "title": data["title"],
-        "raw_notes": data["raw_notes"],
-        "status": "saved",
-        "organized": None,
-        "created_at": timestamp,
-        "updated_at": timestamp,
-    }
-    sessions.append(session)
-    save_sessions(sessions)
-    return jsonify(session), 201
+    connection = get_db_connection()
+    try:
+        cursor = connection.execute(
+            """
+            INSERT INTO note_sessions (title, raw_notes, status, organized_json, created_at, updated_at)
+            VALUES (?, ?, 'saved', NULL, ?, ?)
+            """,
+            (data["title"], data["raw_notes"], timestamp, timestamp),
+        )
+        session_id = cursor.lastrowid
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM note_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        return jsonify(session_from_row(row)), 201
+    finally:
+        connection.close()
 
 
 @app.get("/api/sessions/<int:session_id>")
 def get_session(session_id: int) -> Response | tuple[Response, int]:
-    session = find_session(session_id)
-    if session is None:
-        return jsonify({"error": "Session not found."}), 404
-    return jsonify(session)
+    connection = get_db_connection()
+    try:
+        row = connection.execute(
+            "SELECT * FROM note_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        if row is None:
+            return jsonify({"error": "Session not found."}), 404
+        return jsonify(session_from_row(row))
+    finally:
+        connection.close()
 
 
 @app.put("/api/sessions/<int:session_id>")
@@ -180,52 +177,105 @@ def update_session(session_id: int) -> Response | tuple[Response, int]:
     if error is not None:
         return error
 
-    sessions = load_sessions()
-    session = find_session(session_id, sessions)
-    if session is None:
-        return jsonify({"error": "Session not found."}), 404
+    timestamp = datetime.now(timezone.utc).isoformat()
+    connection = get_db_connection()
+    try:
+        existing = connection.execute(
+            "SELECT raw_notes FROM note_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        if existing is None:
+            return jsonify({"error": "Session not found."}), 404
 
-    raw_notes_changed = session.get("raw_notes") != data["raw_notes"]
-    session["title"] = data["title"]
-    session["raw_notes"] = data["raw_notes"]
-    if raw_notes_changed:
-        session["organized"] = None
-        session["status"] = "saved"
-    session["updated_at"] = datetime.now(timezone.utc).isoformat()
+        if existing["raw_notes"] != data["raw_notes"]:
+            cursor = connection.execute(
+                """
+                UPDATE note_sessions
+                SET title = ?, raw_notes = ?, status = 'saved',
+                    organized_json = NULL, updated_at = ?
+                WHERE id = ?
+                """,
+                (data["title"], data["raw_notes"], timestamp, session_id),
+            )
+        else:
+            cursor = connection.execute(
+                """
+                UPDATE note_sessions
+                SET title = ?, raw_notes = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (data["title"], data["raw_notes"], timestamp, session_id),
+            )
 
-    save_sessions(sessions)
-    return jsonify(session)
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Session not found."}), 404
+
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM note_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        return jsonify(session_from_row(row))
+    finally:
+        connection.close()
 
 
 @app.delete("/api/sessions/<int:session_id>")
 def delete_session(session_id: int) -> tuple[str, int] | tuple[Response, int]:
-    sessions = load_sessions()
-    session = find_session(session_id, sessions)
-    if session is None:
-        return jsonify({"error": "Session not found."}), 404
-
-    sessions.remove(session)
-    save_sessions(sessions)
-    return "", 204
+    connection = get_db_connection()
+    try:
+        cursor = connection.execute(
+            "DELETE FROM note_sessions WHERE id = ?",
+            (session_id,),
+        )
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Session not found."}), 404
+        connection.commit()
+        return "", 204
+    finally:
+        connection.close()
 
 
 @app.post("/api/sessions/<int:session_id>/organize")
 def organize_session(session_id: int) -> Response | tuple[Response, int]:
-    sessions = load_sessions()
-    session = find_session(session_id, sessions)
-    if session is None:
-        return jsonify({"error": "Session not found."}), 404
+    connection = get_db_connection()
+    try:
+        existing = connection.execute(
+            "SELECT raw_notes FROM note_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        if existing is None:
+            return jsonify({"error": "Session not found."}), 404
 
-    raw_notes = session.get("raw_notes")
-    if not isinstance(raw_notes, str):
-        app.logger.error("Session %s has invalid raw_notes data.", session_id)
-        return jsonify({"error": "Session data is invalid."}), 500
+        raw_notes = existing["raw_notes"]
+        if not isinstance(raw_notes, str):
+            app.logger.error("Session %s has invalid raw_notes data.", session_id)
+            return jsonify({"error": "Session data is invalid."}), 500
 
-    session["organized"] = organize_notes(raw_notes)
-    session["status"] = "organized"
-    session["updated_at"] = datetime.now(timezone.utc).isoformat()
-    save_sessions(sessions)
-    return jsonify(session)
+        organized = organize_notes(raw_notes)
+        cursor = connection.execute(
+            """
+            UPDATE note_sessions
+            SET organized_json = ?, status = 'organized', updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                json.dumps(organized, ensure_ascii=False),
+                datetime.now(timezone.utc).isoformat(),
+                session_id,
+            ),
+        )
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Session not found."}), 404
+
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM note_sessions WHERE id = ?",
+            (session_id,),
+        ).fetchone()
+        return jsonify(session_from_row(row))
+    finally:
+        connection.close()
 
 
 @app.errorhandler(404)
