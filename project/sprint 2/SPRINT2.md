@@ -33,6 +33,8 @@ SQLite database file: `backend/notes.db`. The schema is in `backend/schema.sql` 
 
 ## How to Run & Test
 
+Prerequisite: Python 3.10 or later (tested locally with Python 3.14.7). The project path inside the cloned repository is `project\sprint 2`; run the commands below from that folder.
+
 1. Clone the repository and enter the Sprint 2 project folder:
 
    ```powershell
@@ -40,7 +42,7 @@ SQLite database file: `backend/notes.db`. The schema is in `backend/schema.sql` 
    Set-Location 'SSW215-DThomas\project\sprint 2'
    ```
 
-2. Create and activate a virtual environment, then install the backend dependency:
+2. Create and activate a project-local virtual environment, then install the backend dependency:
 
    ```powershell
    py -m venv .venv
